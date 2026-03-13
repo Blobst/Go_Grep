@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 )
 
 const version float64 = 1.0
@@ -14,35 +14,37 @@ const (
 	ColorReset = "\x1b[0m"
 )
 
-type Commands struct {
-	CommandExit     string
-	CommandHelp     string
-	CommandVersion  string
-	CommandPrevious string
-}
+func findSimilarFiles(fileName string) {
+	files, _ := os.ReadDir(".")
+	found := false
+	lowerInput := strings.ToLower(fileName)
 
-func NewCommands() *Commands {
-	return &Commands{
-		CommandExit:     "{exit",
-		CommandHelp:     "{help",
-		CommandVersion:  "{ver",
-		CommandPrevious: "{pre",
-	}
-}
+	for _, f := range files {
+		name := f.Name()
+		lowerName := strings.ToLower(name)
 
-func fileExists(fileName string) {
-	info, err := os.Stat(fileName)
-	if errors.Is(err, os.ErrNotExist) {
-		return
+		if strings.Contains(lowerName, lowerInput) {
+			// Find start index of match
+			start := strings.Index(lowerName, lowerInput)
+			end := start + len(fileName)
+
+			// Build highlighted string
+			highlighted := name[:start] + ColorFound + name[start:end] + ColorReset + name[end:]
+			fmt.Println("Found:", highlighted)
+			found = true
+		}
 	}
-	fmt.Printf("File Found: %v%s%v\n", ColorFound, info.Name(), ColorReset)
+
+	if !found {
+		fmt.Println("No matching files")
+	}
 }
 
 func main() {
 	progIsRunning := true
 	scanner := bufio.NewScanner(os.Stdin)
 	cmd := NewCommands()
-	re := regexp.MustCompile(`^[a-zA-Z0-9 _-]+$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9 _\-.]+$`)
 	fmt.Printf("go_grep v[%.1f]\n", version)
 
 	for progIsRunning {
@@ -60,7 +62,7 @@ func main() {
 
 		default:
 			if re.MatchString(scanner.Text()) {
-				fileExists(scanner.Text())
+				findSimilarFiles(scanner.Text())
 			}
 		}
 	}
