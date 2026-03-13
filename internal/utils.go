@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -37,6 +38,36 @@ func FindSimilarFiles(fileName string) {
 	}
 }
 
-func FindWordSimilar(word string) {
+func FindWordSimilar(fileName string, word string) {
+	file, err := os.Open(fileName)
+	if err != nil {
+		fmt.Println("Error opening file:", fileName)
+		return
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
 
+		}
+	}(file)
+
+	scanner := bufio.NewScanner(file)
+	lineNum := 1
+	wordLower := strings.ToLower(word)
+	found := false
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(strings.ToLower(line), wordLower) {
+			// Highlight the matching word(s)
+			highlighted := strings.ReplaceAll(line, word, ColorFound+word+ColorReset)
+			fmt.Printf("%s:%d: %s\n", fileName, lineNum, highlighted)
+			found = true
+		}
+		lineNum++
+	}
+
+	if !found {
+		fmt.Println("No matches found in", fileName)
+	}
 }

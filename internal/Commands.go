@@ -4,7 +4,6 @@ type Commands struct {
 	CommandExit    string
 	CommandHelp    string
 	CommandVersion string
-	CommandWord    string
 }
 
 func NewCommands() *Commands {
@@ -12,6 +11,5 @@ func NewCommands() *Commands {
 		CommandExit:    "{exit",
 		CommandHelp:    "{help",
 		CommandVersion: "{ver",
-		CommandWord:    "{word",
 	}
 }

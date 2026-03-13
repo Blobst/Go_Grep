@@ -33,6 +33,12 @@ func main() {
 		default:
 			if re.MatchString(scanner.Text()) {
 				ut.FindSimilarFiles(scanner.Text())
+				files, _ := os.ReadDir(".")
+				for _, f := range files {
+					if !f.IsDir() {
+						ut.FindWordSimilar(f.Name(), scanner.Text())
+					}
+				}
 			}
 		}
 	}
