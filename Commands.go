@@ -1,17 +1,15 @@
 package main
 
 type Commands struct {
-	CommandExit     string
-	CommandHelp     string
-	CommandVersion  string
-	CommandPrevious string
+	CommandExit    string
+	CommandHelp    string
+	CommandVersion string
 }
 
 func NewCommands() *Commands {
 	return &Commands{
-		CommandExit:     "{exit",
-		CommandHelp:     "{help",
-		CommandVersion:  "{ver",
-		CommandPrevious: "{pre", // todo
+		CommandExit:    "{exit",
+		CommandHelp:    "{help",
+		CommandVersion: "{ver",
 	}
 }
