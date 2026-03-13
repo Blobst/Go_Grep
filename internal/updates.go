@@ -14,6 +14,9 @@ func CheckForUpdates() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Printf("Checking github for updates...\n")
+
 	converthistory, err := strconv.ParseFloat(string(updatehistory), 64)
 	if err != nil {
 		log.Fatal(err)
