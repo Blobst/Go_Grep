@@ -8,14 +8,12 @@ import (
 	"regexp"
 )
 
-const version float64 = 1.0
-
 func main() {
 	progIsRunning := true
 	scanner := bufio.NewScanner(os.Stdin)
 	cmd := ut.NewCommands()
 	re := regexp.MustCompile(`^[a-zA-Z0-9 _\-.]+$`)
-	fmt.Printf("go_grep v[%.1f]\n", version)
+	fmt.Printf("go_grep v[%.1f]\n", ut.Version)
 
 	for progIsRunning {
 		fmt.Print("> ")
@@ -28,7 +26,9 @@ func main() {
 		case cmd.CommandHelp:
 			fmt.Print("Commands: {help, {exit, {ver\n")
 		case cmd.CommandVersion:
-			fmt.Printf("go_grep v[%.1f]\n", version)
+			fmt.Printf("go_grep v[%.1f]\n", ut.Version)
+		case cmd.CommandUpdateCheck:
+			ut.CheckForUpdates()
 
 		default:
 			if re.MatchString(scanner.Text()) {

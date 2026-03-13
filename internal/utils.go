@@ -3,8 +3,9 @@ package internal
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
-	"strings"
+	"regexp"
 )
 
 const (
@@ -12,22 +13,37 @@ const (
 	ColorReset = "\x1b[0m"
 )
 
+func newInsensitiveMatcher(query string) *regexp.Regexp {
+	if query == "" {
+		return nil
+	}
+
+	return regexp.MustCompile("(?i)" + regexp.QuoteMeta(query))
+}
+
+func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
+	if matcher == nil {
+		return text, false
+	}
+
+	loc := matcher.FindStringIndex(text)
+	if loc == nil {
+		return text, false
+	}
+
+	start, end := loc[0], loc[1]
+	return text[:start] + ColorFound + text[start:end] + ColorReset + text[end:], true
+}
+
 func FindSimilarFiles(fileName string) {
 	files, _ := os.ReadDir(".")
 	found := false
-	lowerInput := strings.ToLower(fileName)
+	matcher := newInsensitiveMatcher(fileName)
 
 	for _, f := range files {
 		name := f.Name()
-		lowerName := strings.ToLower(name)
 
-		if strings.Contains(lowerName, lowerInput) {
-			// Find start index of match
-			start := strings.Index(lowerName, lowerInput)
-			end := start + len(fileName)
-
-			// Build highlighted string
-			highlighted := name[:start] + ColorFound + name[start:end] + ColorReset + name[end:]
+		if highlighted, ok := highlightFirstMatch(name, matcher); ok {
 			fmt.Println("Found:", highlighted)
 			found = true
 		}
@@ -47,20 +63,18 @@ func FindWordSimilar(fileName string, word string) {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-
+			log.Fatal(err)
 		}
 	}(file)
 
 	scanner := bufio.NewScanner(file)
 	lineNum := 1
-	wordLower := strings.ToLower(word)
 	found := false
+	matcher := newInsensitiveMatcher(word)
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(strings.ToLower(line), wordLower) {
-			// Highlight the matching word(s)
-			highlighted := strings.ReplaceAll(line, word, ColorFound+word+ColorReset)
+		if highlighted, ok := highlightFirstMatch(line, matcher); ok {
 			fmt.Printf("%s:%d: %s\n", fileName, lineNum, highlighted)
 			found = true
 		}
