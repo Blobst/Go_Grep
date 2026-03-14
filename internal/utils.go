@@ -8,11 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 const (
-	ColorFound = "\x1b[32m"
+	ColorPath  = "\x1b[32m"
+	ColorLine  = "\x1b[34m"
+	ColorMatch = "\x1b[31m"
 	ColorReset = "\x1b[0m"
 )
 
@@ -24,84 +27,84 @@ func newInsensitiveMatcher(query string) (*regexp.Regexp, error) {
 	return regexp.Compile(`(?i)` + query)
 }
 
-func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
+func colorize(text, color string) string {
+	if os.Getenv("NO_COLOR") != "" {
+		return text
+	}
+	return color + text + ColorReset
+}
+
+func highlightAllMatches(text string, matcher *regexp.Regexp) (string, bool) {
 	if matcher == nil {
 		return text, false
 	}
 
-	loc := matcher.FindStringIndex(text)
-	if loc == nil {
+	locs := matcher.FindAllStringIndex(text, -1)
+	if len(locs) == 0 {
 		return text, false
 	}
 
-	start, end := loc[0], loc[1]
-	if start == end {
-		return text, false
+	var b strings.Builder
+	last := 0
+	for _, loc := range locs {
+		start, end := loc[0], loc[1]
+		if start == end {
+			continue
+		}
+		b.WriteString(text[last:start])
+		b.WriteString(ColorMatch)
+		b.WriteString(text[start:end])
+		b.WriteString(ColorReset)
+		last = end
 	}
+	b.WriteString(text[last:])
 
-	return text[:start] + ColorFound + text[start:end] + ColorReset + text[end:], true
+	return b.String(), true
 }
 
-func findSimilarFiles(matcher *regexp.Regexp) {
-	found := false
-
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-
-		name := d.Name()
-
-		if highlighted, ok := highlightFirstMatch(name, matcher); ok {
-			fmt.Println("Found:", filepath.Join(filepath.Dir(path), highlighted))
-			found = true
-		}
-
-		return nil
-	})
+func findWordSimilarInFile(displayName string, filePath string, matcher *regexp.Regexp, hasPrintedAnyFile *bool) bool {
+	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Error searching files:", err)
-	}
-
-	if !found {
-		fmt.Println("No matching files")
-	}
-}
-
-func findWordSimilarInFile(fileName string, matcher *regexp.Regexp) bool {
-	file, err := os.Open(fileName)
-	if err != nil {
-		fmt.Println("Error opening file:", fileName)
+		fmt.Println("Error opening file:", filePath)
 		return false
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			fmt.Println("Error closing file:", fileName)
+			fmt.Println("Error closing file:", filePath)
 		}
 	}()
 
 	scanner := bufio.NewScanner(file)
 	lineNum := 1
-	found := false
+	foundInThisFile := false
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if highlighted, ok := highlightFirstMatch(line, matcher); ok {
-			fmt.Printf("%s:%d: %s\n", fileName, lineNum, highlighted)
-			found = true
+		highlighted, ok := highlightAllMatches(line, matcher)
+		if ok {
+			if !foundInThisFile {
+				if *hasPrintedAnyFile {
+					fmt.Println()
+				}
+				fmt.Println(colorize(displayName, ColorPath))
+				*hasPrintedAnyFile = true
+				foundInThisFile = true
+			}
+
+			fmt.Printf("%s:%s\n", colorize(strconv.Itoa(lineNum), ColorLine), highlighted)
 		}
 		lineNum++
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading file:", fileName)
+		fmt.Println("Error reading file:", filePath)
 	}
 
-	return found
+	return foundInThisFile
 }
 
 func findWordSimilar(root string, matcher *regexp.Regexp) {
-	found := false
+	hasPrintedAnyFile := false
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -112,18 +115,16 @@ func findWordSimilar(root string, matcher *regexp.Regexp) {
 			return nil
 		}
 
-		if findWordSimilarInFile(path, matcher) {
-			found = true
+		displayPath := path
+		if rel, relErr := filepath.Rel(root, path); relErr == nil {
+			displayPath = rel
 		}
 
+		findWordSimilarInFile(displayPath, path, matcher, &hasPrintedAnyFile)
 		return nil
 	})
 	if err != nil {
 		fmt.Println("Error searching files:", err)
-	}
-
-	if !found {
-		fmt.Println("No matches found")
 	}
 }
 
@@ -134,6 +135,5 @@ func Search(query string) {
 		return
 	}
 
-	findSimilarFiles(matcher)
 	findWordSimilar(".", matcher)
 }

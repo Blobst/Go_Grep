@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-const Version = "1.0.3"
+const Version = "1.0.4"
 
 type Release struct {
 	TagName string `json:"tag_name"`
