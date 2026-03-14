@@ -5,18 +5,16 @@ import (
 	"fmt"
 	ut "gogrep/internal"
 	"os"
-	"regexp"
 )
 
 func main() {
 	progIsRunning := true
 	scanner := bufio.NewScanner(os.Stdin)
 	cmd := ut.NewCommands()
-	re := regexp.MustCompile(`^[a-zA-Z0-9 _\-.]+$`)
 	fmt.Printf("go_grep v[%s]\n", ut.Version)
 
 	for progIsRunning {
-		fmt.Print("> ")
+		fmt.Print(":> ")
 		scanner.Scan()
 
 		switch scanner.Text() {
@@ -31,10 +29,7 @@ func main() {
 			ut.CheckForUpdates()
 
 		default:
-			if re.MatchString(scanner.Text()) {
-				ut.FindSimilarFiles(scanner.Text())
-				ut.FindWordSimilar(".", scanner.Text())
-			}
+			ut.Search(scanner.Text())
 		}
 	}
 }

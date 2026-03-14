@@ -2,11 +2,13 @@ package internal
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -14,12 +16,12 @@ const (
 	ColorReset = "\x1b[0m"
 )
 
-func newInsensitiveMatcher(query string) *regexp.Regexp {
-	if query == "" {
-		return nil
+func newInsensitiveMatcher(query string) (*regexp.Regexp, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, errors.New("search pattern cannot be empty")
 	}
 
-	return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(query))
+	return regexp.Compile(`(?i)` + query)
 }
 
 func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
@@ -33,12 +35,15 @@ func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
 	}
 
 	start, end := loc[0], loc[1]
+	if start == end {
+		return text, false
+	}
+
 	return text[:start] + ColorFound + text[start:end] + ColorReset + text[end:], true
 }
 
-func FindSimilarFiles(fileName string) {
+func findSimilarFiles(matcher *regexp.Regexp) {
 	found := false
-	matcher := newInsensitiveMatcher(fileName)
 
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -95,14 +100,8 @@ func findWordSimilarInFile(fileName string, matcher *regexp.Regexp) bool {
 	return found
 }
 
-func FindWordSimilar(root string, word string) {
+func findWordSimilar(root string, matcher *regexp.Regexp) {
 	found := false
-	matcher := newInsensitiveMatcher(word)
-
-	if matcher == nil {
-		fmt.Println("No matches found")
-		return
-	}
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -126,4 +125,15 @@ func FindWordSimilar(root string, word string) {
 	if !found {
 		fmt.Println("No matches found")
 	}
+}
+
+func Search(query string) {
+	matcher, err := newInsensitiveMatcher(query)
+	if err != nil {
+		fmt.Println("Invalid regular expression:", err)
+		return
+	}
+
+	findSimilarFiles(matcher)
+	findWordSimilar(".", matcher)
 }
