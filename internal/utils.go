@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -20,7 +19,7 @@ func newInsensitiveMatcher(query string) *regexp.Regexp {
 		return nil
 	}
 
-	return regexp.MustCompile("(?i)" + regexp.QuoteMeta(query))
+	return regexp.MustCompile(`(?i)` + regexp.QuoteMeta(query))
 }
 
 func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
@@ -41,7 +40,7 @@ func FindSimilarFiles(fileName string) {
 	found := false
 	matcher := newInsensitiveMatcher(fileName)
 
-	filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -55,29 +54,30 @@ func FindSimilarFiles(fileName string) {
 
 		return nil
 	})
+	if err != nil {
+		fmt.Println("Error searching files:", err)
+	}
 
 	if !found {
 		fmt.Println("No matching files")
 	}
 }
 
-func FindWordSimilar(fileName string, word string) {
+func findWordSimilarInFile(fileName string, matcher *regexp.Regexp) bool {
 	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Error opening file:", fileName)
-		return
+		return false
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Fatal(err)
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Println("Error closing file:", fileName)
 		}
-	}(file)
+	}()
 
 	scanner := bufio.NewScanner(file)
 	lineNum := 1
 	found := false
-	matcher := newInsensitiveMatcher(word)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -88,7 +88,42 @@ func FindWordSimilar(fileName string, word string) {
 		lineNum++
 	}
 
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", fileName)
+	}
+
+	return found
+}
+
+func FindWordSimilar(root string, word string) {
+	found := false
+	matcher := newInsensitiveMatcher(word)
+
+	if matcher == nil {
+		fmt.Println("No matches found")
+		return
+	}
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		if findWordSimilarInFile(path, matcher) {
+			found = true
+		}
+
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error searching files:", err)
+	}
+
 	if !found {
-		fmt.Println("No matches found in", fileName)
+		fmt.Println("No matches found")
 	}
 }

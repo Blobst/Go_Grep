@@ -24,7 +24,7 @@ func main() {
 			fmt.Println("Exiting...")
 			progIsRunning = false
 		case cmd.CommandHelp:
-			fmt.Print("Commands: {help, {exit, {ver\n")
+			fmt.Print("Commands: {help, {exit, {ver, {upd\n")
 		case cmd.CommandVersion:
 			fmt.Printf("go_grep v[%s]\n", ut.Version)
 		case cmd.CommandUpdateCheck:
@@ -33,12 +33,7 @@ func main() {
 		default:
 			if re.MatchString(scanner.Text()) {
 				ut.FindSimilarFiles(scanner.Text())
-				files, _ := os.ReadDir(".")
-				for _, f := range files {
-					if !f.IsDir() {
-						ut.FindWordSimilar(f.Name(), scanner.Text())
-					}
-				}
+				ut.FindWordSimilar(".", scanner.Text())
 			}
 		}
 	}
