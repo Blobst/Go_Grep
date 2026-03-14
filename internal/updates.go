@@ -6,10 +6,12 @@ import (
 	"net/http"
 )
 
-const Version = "1.0.2"
+const Version = "1.0.3"
 
 type Release struct {
 	TagName string `json:"tag_name"`
+	Body    string `json:"body"`
+	URL     string `json:"html_url"`
 }
 
 func CheckForUpdates() {
@@ -35,6 +37,8 @@ func CheckForUpdates() {
 	if latest != Version {
 		fmt.Println("New version available:", latest)
 		fmt.Println("Current version:", Version)
+		fmt.Println("Release notes:\n", release.Body)
+		fmt.Println("Download here:", release.URL)
 	} else {
 		fmt.Println("You are using the latest version.")
 	}
