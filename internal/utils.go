@@ -3,8 +3,10 @@ package internal
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 )
 
@@ -36,18 +38,23 @@ func highlightFirstMatch(text string, matcher *regexp.Regexp) (string, bool) {
 }
 
 func FindSimilarFiles(fileName string) {
-	files, _ := os.ReadDir(".")
 	found := false
 	matcher := newInsensitiveMatcher(fileName)
 
-	for _, f := range files {
-		name := f.Name()
+	filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		name := d.Name()
 
 		if highlighted, ok := highlightFirstMatch(name, matcher); ok {
-			fmt.Println("Found:", highlighted)
+			fmt.Println("Found:", filepath.Join(filepath.Dir(path), highlighted))
 			found = true
 		}
-	}
+
+		return nil
+	})
 
 	if !found {
 		fmt.Println("No matching files")

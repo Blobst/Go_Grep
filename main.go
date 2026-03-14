@@ -13,7 +13,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	cmd := ut.NewCommands()
 	re := regexp.MustCompile(`^[a-zA-Z0-9 _\-.]+$`)
-	fmt.Printf("go_grep v[%.1f]\n", ut.Version)
+	fmt.Printf("go_grep v[%s]\n", ut.Version)
 
 	for progIsRunning {
 		fmt.Print("> ")
@@ -26,7 +26,7 @@ func main() {
 		case cmd.CommandHelp:
 			fmt.Print("Commands: {help, {exit, {ver\n")
 		case cmd.CommandVersion:
-			fmt.Printf("go_grep v[%.1f]\n", ut.Version)
+			fmt.Printf("go_grep v[%s]\n", ut.Version)
 		case cmd.CommandUpdateCheck:
 			ut.CheckForUpdates()
 

@@ -1,29 +1,41 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
+	"net/http"
 )
 
-const Version float64 = 1.0
+const Version = "1.0.1"
+
+type Release struct {
+	TagName string `json:"tag_name"`
+}
 
 func CheckForUpdates() {
-	updatehistory, err := os.ReadFile(".updatehist")
+	url := "https://api.github.com/repos/Blobst/Go_Grep/releases/latest"
+
+	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Update check failed:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var release Release
+
+	err = json.NewDecoder(resp.Body).Decode(&release)
+	if err != nil {
+		fmt.Println("Failed to parse response:", err)
+		return
 	}
 
-	fmt.Printf("Checking github for updates...\n")
+	latest := release.TagName
 
-	converthistory, err := strconv.ParseFloat(string(updatehistory), 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if converthistory < Version {
-		fmt.Printf("A new version of go_grep is available! (v[%.1f])\n", Version)
-		fmt.Println("Please visit the GitHub repository to download the latest version.")
+	if latest != Version {
+		fmt.Println("New version available:", latest)
+		fmt.Println("Current version:", Version)
+	} else {
+		fmt.Println("You are using the latest version.")
 	}
 }
