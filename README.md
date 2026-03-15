@@ -1,5 +1,5 @@
 # Go_grep
-![GoGrepLogo.png](assests/GoGrepLogo.png)
+![GoGrepLogo.png](assets/GoGrepLogo.png)
 
 `gogrep` is a recursive CLI search tool for regular expressions.
 
