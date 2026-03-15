@@ -19,12 +19,16 @@ const (
 	ColorReset = "\x1b[0m"
 )
 
-func newInsensitiveMatcher(query string) (*regexp.Regexp, error) {
+func newMatcher(query string, ignoreCase bool) (*regexp.Regexp, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("search pattern cannot be empty")
 	}
 
-	return regexp.Compile(`(?i)` + query)
+	if ignoreCase {
+		query = `(?i)` + query
+	}
+
+	return regexp.Compile(query)
 }
 
 func colorize(text, color string) string {
@@ -52,9 +56,7 @@ func highlightAllMatches(text string, matcher *regexp.Regexp) (string, bool) {
 			continue
 		}
 		b.WriteString(text[last:start])
-		b.WriteString(ColorMatch)
-		b.WriteString(text[start:end])
-		b.WriteString(ColorReset)
+		b.WriteString(colorize(text[start:end], ColorMatch))
 		last = end
 	}
 	b.WriteString(text[last:])
@@ -62,15 +64,14 @@ func highlightAllMatches(text string, matcher *regexp.Regexp) (string, bool) {
 	return b.String(), true
 }
 
-func findWordSimilarInFile(displayName string, filePath string, matcher *regexp.Regexp, hasPrintedAnyFile *bool) bool {
+func findWordSimilarInFile(displayName string, filePath string, matcher *regexp.Regexp) (bool, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Error opening file:", filePath)
-		return false
+		return false, fmt.Errorf("failed to open file %q: %w", filePath, err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			fmt.Println("Error closing file:", filePath)
+			_, _ = fmt.Fprintf(os.Stderr, "failed to close file %q: %v\n", filePath, err)
 		}
 	}()
 
@@ -82,29 +83,21 @@ func findWordSimilarInFile(displayName string, filePath string, matcher *regexp.
 		line := scanner.Text()
 		highlighted, ok := highlightAllMatches(line, matcher)
 		if ok {
-			if !foundInThisFile {
-				if *hasPrintedAnyFile {
-					fmt.Println()
-				}
-				fmt.Println(colorize(displayName, ColorPath))
-				*hasPrintedAnyFile = true
-				foundInThisFile = true
-			}
-
-			fmt.Printf("%s:%s\n", colorize(strconv.Itoa(lineNum), ColorLine), highlighted)
+			foundInThisFile = true
+			fmt.Printf("%s:%s:%s\n", colorize(displayName, ColorPath), colorize(strconv.Itoa(lineNum), ColorLine), highlighted)
 		}
 		lineNum++
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error reading file:", filePath)
+		return foundInThisFile, fmt.Errorf("failed while reading file %q: %w", filePath, err)
 	}
 
-	return foundInThisFile
+	return foundInThisFile, nil
 }
 
-func findWordSimilar(root string, matcher *regexp.Regexp) {
-	hasPrintedAnyFile := false
+func findWordSimilar(root string, matcher *regexp.Regexp) (bool, error) {
+	foundAny := false
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -120,20 +113,36 @@ func findWordSimilar(root string, matcher *regexp.Regexp) {
 			displayPath = rel
 		}
 
-		findWordSimilarInFile(displayPath, path, matcher, &hasPrintedAnyFile)
+		foundInFile, fileErr := findWordSimilarInFile(displayPath, path, matcher)
+		if fileErr != nil {
+			_, _ = fmt.Fprintln(os.Stderr, fileErr)
+		}
+		if foundInFile {
+			foundAny = true
+		}
 		return nil
 	})
 	if err != nil {
-		fmt.Println("Error searching files:", err)
+		return foundAny, fmt.Errorf("error searching files: %w", err)
 	}
+
+	return foundAny, nil
 }
 
-func Search(query string) {
-	matcher, err := newInsensitiveMatcher(query)
+func Search(query string, path string, ignoreCase bool) (bool, error) {
+	matcher, err := newMatcher(query, ignoreCase)
 	if err != nil {
-		fmt.Println("Invalid regular expression:", err)
-		return
+		return false, fmt.Errorf("invalid regular expression: %w", err)
 	}
 
-	findWordSimilar(".", matcher)
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, fmt.Errorf("path %q is not accessible: %w", path, err)
+	}
+
+	if !info.IsDir() {
+		return findWordSimilarInFile(path, path, matcher)
+	}
+
+	return findWordSimilar(path, matcher)
 }

@@ -1,5 +1,30 @@
 # Go_grep
 ![GoGrepLogo.png](assests/GoGrepLogo.png)
 
-Go_grep is a simple command-line tool written in Go that mimics the functionality of the traditional `grep` command. It allows you to search for specific patterns in files and display the matching lines.
-- ( w chatgpt for writing this readme i dont have time to write it myself ngl)
+`gogrep` is a recursive CLI search tool for regular expressions.
+
+## Usage
+
+```bash
+gogrep [flags] <pattern> [path]
+```
+
+- `pattern`: Go regular expression
+- `path`: file or directory to search (default: `.`)
+
+### Flags
+
+- `-i` case-insensitive match
+- `-v`, `--version` print version
+- `-u`, `--update` check latest release
+- `-h`, `--help` show help
+
+## Examples
+
+```bash
+gogrep "TODO"
+gogrep -i "error|warning" ./internal
+gogrep "^func\\s+Search" main.go
+```
+
+Output is `path:line:content` (similar to ripgrep), with ANSI highlighting unless `NO_COLOR` is set.

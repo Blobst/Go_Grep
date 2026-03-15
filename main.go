@@ -1,35 +1,41 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	ut "gogrep/internal"
 	"os"
 )
 
 func main() {
-	progIsRunning := true
-	scanner := bufio.NewScanner(os.Stdin)
-	cmd := ut.NewCommands()
-	fmt.Printf("go_grep v[%s]\n", ut.Version)
+	options, err := ut.ParseCLIArgs(os.Args[1:])
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, ut.Usage())
+		os.Exit(2)
+	}
 
-	for progIsRunning {
-		fmt.Print(":> ")
-		scanner.Scan()
+	if options.Help {
+		fmt.Println(ut.Usage())
+		return
+	}
 
-		switch scanner.Text() {
-		case cmd.CommandExit:
-			fmt.Println("Exiting...")
-			progIsRunning = false
-		case cmd.CommandHelp:
-			fmt.Print("Commands: {help, {exit, {ver, {upd\n")
-		case cmd.CommandVersion:
-			fmt.Printf("go_grep v[%s]\n", ut.Version)
-		case cmd.CommandUpdateCheck:
-			ut.CheckForUpdates()
+	if options.Version {
+		fmt.Printf("go_grep %s\n", ut.Version)
+		return
+	}
 
-		default:
-			ut.Search(scanner.Text())
-		}
+	if options.Update {
+		ut.CheckForUpdates()
+		return
+	}
+
+	found, err := ut.Search(options.Pattern, options.Path, options.IgnoreCase)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+
+	if !found {
+		os.Exit(1)
 	}
 }
