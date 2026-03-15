@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 const Version = "1.0.4"
@@ -12,6 +14,25 @@ type Release struct {
 	TagName string `json:"tag_name"`
 	Body    string `json:"body"`
 	URL     string `json:"html_url"`
+}
+
+func isNewerVersion(latest, current string) bool {
+	latestParts := strings.Split(latest, ".")
+	currentParts := strings.Split(current, ".")
+
+	for i := 0; i < len(latestParts) && i < len(currentParts); i++ {
+		l, _ := strconv.Atoi(latestParts[i])
+		c, _ := strconv.Atoi(currentParts[i])
+
+		if l > c {
+			return true
+		}
+		if l < c {
+			return false
+		}
+	}
+
+	return false
 }
 
 func CheckForUpdates() {
@@ -32,9 +53,9 @@ func CheckForUpdates() {
 		return
 	}
 
-	latest := release.TagName
+	latest := strings.TrimPrefix(release.TagName, "v")
 
-	if latest != Version {
+	if isNewerVersion(latest, Version) {
 		fmt.Println("New version available:", latest)
 		fmt.Println("Current version:", Version)
 		fmt.Println("Release notes:\n", release.Body)
