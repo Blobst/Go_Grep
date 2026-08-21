@@ -6,7 +6,7 @@
 ## Usage
 
 ```bash
-gogrep [flags] <pattern> [path]
+gogrep [flags] <pattern> [path].
 ```
 
 - `pattern`: Go regular expression
