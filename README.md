@@ -27,4 +27,4 @@ gogrep -i "error|warning" ./internal
 gogrep "^func\\s+Search" main.go
 ```
 
-Output is `path:line:content` (similar to ripgrep), with ANSI highlighting unless `NO_COLOR` is set.
+Output is `path:line:content` (similar to rg (ripgrep) ), with ANSI highlighting unless `NO_COLOR` is set.
